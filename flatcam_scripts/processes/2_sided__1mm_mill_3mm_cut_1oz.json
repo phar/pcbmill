@@ -1,0 +1,6 @@
+{
+"isolation_bit_width_mm":0.1,
+"cutout_bit_width_mm":3.0,
+"copper_depth":0.05,
+"pcb_thickness":2.5,
+}

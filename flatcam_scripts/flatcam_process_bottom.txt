@@ -1,0 +1,11 @@
+set_sys excellon_zeros T
+file mkdir %project_path%%dirsep%camfiles
+open_gerber %project_path%%dirsep%%bottom_file%
+mirror %bottom_file% -axis %board_flip_axis% -center 1
+isolate %bottom_file% -dia %isolation_bit_width_mm% -passes %milling_pass_count% -overlap %pass_overlap% -combine 1 -outname %bottom_file%_iso
+cncjob %bottom_file%_iso -z_cut -%copper_depth% -z_move %travel_height% -feedrate %mill_feedrate% -tooldia %isolation_bit_width_mm% -spindlespeed %mill_spindle%  -outname %bottom_file%.nc
+write_gcode %bottom_file%.nc %project_path%%dirsep%camfiles%dirsep%bottom.nc
+plot
+quit
+
+

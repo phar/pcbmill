@@ -1,0 +1,8 @@
+{
+"cutout_gap_size":2,
+"cutout_margin":0,
+"pcb_thickness":2.5,
+"copper_depth":0.05,
+"pass_overlap":0.50,
+"milling_pass_count":2
+}

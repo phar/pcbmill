@@ -1,0 +1,3 @@
+[submodule "flatcam"]
+	path = flatcam
+	url = https://github.com/phar/flatcam

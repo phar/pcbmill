@@ -1,0 +1,26 @@
+set_sys excellon_zeros T
+file mkdir %project_path%%dirsep%camfiles
+open_gerber %project_path%%dirsep%%top_file%
+isolate %top_file% -dia %isolation_bit_width_mm% -passes %milling_pass_count% -overlap %pass_overlap% -combine 1 -outname %top_file%_iso
+cncjob %top_file%_iso -z_cut -%copper_depth% -z_move %travel_height% -feedrate %mill_feedrate% -tooldia %isolation_bit_width_mm% -spindlespeed %mill_spindle%  -outname %top_file%.nc
+open_gerber %project_path%%dirsep%%bottom_file%
+mirror %bottom_file% -axis %board_flip_axis% -center 1
+isolate %bottom_file% -dia %isolation_bit_width_mm% -passes %milling_pass_count% -overlap %pass_overlap% -combine 1 -outname %bottom_file%_iso
+cncjob %bottom_file%_iso -z_cut -%copper_depth% -z_move %travel_height% -feedrate %mill_feedrate% -tooldia %isolation_bit_width_mm% -spindlespeed %mill_spindle%  -outname %bottom_file%.nc
+open_excellon %project_path%%dirsep%%drill_file%
+scale %drill_file% .1
+drillcncjob %drill_file% -drillz -%pcb_thickness% -travelz %travel_height% -feedrate %drill_feedrate% -spindlespeed %drill_spindle% -toolchange 1 -toolchangez %toolchange_z% -outname %drill_file%_top.nc
+mirror %drill_file% -axis %board_flip_axis% -center 1
+drillcncjob %drill_file% -drillz -%pcb_thickness% -travelz %travel_height% -feedrate %drill_feedrate% -spindlespeed %drill_spindle% -toolchange 1 -toolchangez %toolchange_z% -outname %drill_file%_bottom.nc
+open_gerber %project_path%%dirsep%%outline_file%
+mirror %outline_file% -axis %board_flip_axis% -center 1
+cutout %outline_file% -margin %cutout_margin%  -dia %cutout_bit_width_mm%  -gapsize %cutout_gap_size%  -gaps 4
+cncjob %outline_file%_cutout -z_cut -%pcb_thickness% -z_move %travel_height% -feedrate %cutout_mill_feedrate% -tooldia %cutout_bit_width_mm% -spindlespeed %mill_spindle%  -outname %outline_file%.nc
+write_gcode %drill_file%_top.nc %project_path%%dirsep%camfiles%dirsep%topdrill.nc
+write_gcode %drill_file%_bottom.nc %project_path%%dirsep%camfiles%dirsep%bottomdrill.nc
+write_gcode %outline_file%.nc %project_path%%dirsep%camfiles%dirsep%cutout.nc
+write_gcode %top_file%.nc %project_path%%dirsep%camfiles%dirsep%top.nc
+write_gcode %bottom_file%.nc %project_path%%dirsep%camfiles%dirsep%bottom.nc
+plot
+quit
+

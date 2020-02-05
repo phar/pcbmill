@@ -1,0 +1,10 @@
+set_sys excellon_zeros T
+file mkdir %project_path%%dirsep%camfiles
+open_gerber %project_path%%dirsep%%outline_file%
+mirror %outline_file% -axis %board_flip_axis% -center 1
+cutout %outline_file% -margin %cutout_margin%  -dia %cutout_bit_width_mm%  -gapsize %cutout_gap_size%  -gaps 4
+cncjob %outline_file%_cutout -z_cut -%pcb_thickness% -z_move %travel_height% -feedrate %cutout_mill_feedrate% -tooldia %cutout_bit_width_mm% -spindlespeed %mill_spindle%  -outname %outline_file%.nc
+write_gcode %outline_file%.nc %project_path%%dirsep%camfiles%dirsep%cutout.nc
+plot
+quit
+

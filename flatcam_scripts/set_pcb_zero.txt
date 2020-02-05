@@ -1,0 +1,5 @@
+G0 X0 Y0 Z%travel_height%
+G38.3 Z-%pcb_thickness% F%probe_feedrate%
+G92 Z0
+G0 Z%travel_height% F%fast_move_feedrate%
+M2

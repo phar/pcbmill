@@ -1,0 +1,8 @@
+set_sys excellon_zeros T
+file mkdir %project_path%%dirsep%camfiles
+open_gerber %project_path%%dirsep%%top_file%
+isolate %top_file% -dia %isolation_bit_width_mm% -passes %milling_pass_count% -overlap %pass_overlap% -combine 1 -outname %top_file%_iso
+cncjob %top_file%_iso -z_cut -%copper_depth% -z_move %travel_height% -feedrate %mill_feedrate% -tooldia %isolation_bit_width_mm% -spindlespeed %mill_spindle%  -outname %top_file%.nc
+write_gcode %top_file%.nc %project_path%%dirsep%camfiles%dirsep%top.nc
+plot
+quit
