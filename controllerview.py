@@ -5,30 +5,36 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QSize ,QTimer
 from PyQt5.QtGui import *
-from PyQt5.QtCore import pyqtSignal,pyqtSlot, QObject
-
+#from PyQt5.QtCore import pyqtSignal,pyqtSlot, QObject
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 
 class ControllerView(QDialog,QObject):
 	controller = pyqtSignal(list)
-	def __init__(self,parent = None):
+	position = pyqtSignal(list)
+	def __init__(self,parent,cnccb):
 		QDialog.__init__(self)
 		self.setWindowTitle("Stage Controller")
 		self.pressed = None
+		self.cnccb = cnccb
 #		self.setWindowModality(QtCore.Qt.ApplicationModal)
 		self.gridLayout = QGridLayout(self)     
 		self.setLayout(self.gridLayout)  
-
+		self.jograte = 20
+		
 		self.timer = QTimer()
 		self.timer.timeout.connect(self.tick)
-		self.timer.start(200)
-		self.feedrate = 100
-
+		self.timer.start(500)
+		
 		self.makeWindow()
 
 	def tick(self):
-		if self.pressed:
-				self.controller.emit([self.pressed,self.feedrate])
-				print (self.pressed)#
+		self.position = self.cnccb.send_command("GETPOS")["ret"]
+		self.xpos.setText(str(self.position[0]))
+		self.ypos.setText(str(self.position[1]))
+		self.zpos.setText(str(self.position[2]))
+#		print(self.position)
 
 	def makeWindow(self):
 		self.button = {}
@@ -46,6 +52,14 @@ class ControllerView(QDialog,QObject):
 		mml = QLabel("mm", self)
 		self.gridLayout.addWidget(title, btnline, 0)
 		self.gridLayout.addWidget(self.ypos, btnline, 1)
+		self.gridLayout.addWidget(mml, btnline, 2)
+		btnline +=1
+
+		title = QLabel("Z-Pos", self)
+		self.zpos = QLabel("0.0", self)
+		mml = QLabel("mm", self)
+		self.gridLayout.addWidget(title, btnline, 0)
+		self.gridLayout.addWidget(self.zpos, btnline, 1)
 		self.gridLayout.addWidget(mml, btnline, 2)
 		btnline +=1
 
@@ -122,25 +136,74 @@ class ControllerView(QDialog,QObject):
 		self.button["plus"].setIconSize(QtCore.QSize(24,24))
 		self.button["plus"].pressed.connect(lambda : self.handleButtonp("plus"))
 		self.button["plus"].released.connect(lambda : self.handleButtonr("plus"))
-		self.gridLayout.addWidget(self.button["plus"], 2, 3)
+		self.gridLayout.addWidget(self.button["plus"], 3, 3)
 
 		self.button["minus"] = QPushButton('', self)
 		self.button["minus"].setIcon(QIcon('images/minus.png'))
 		self.button["minus"].setIconSize(QtCore.QSize(24,24))
 		self.button["minus"].pressed.connect( lambda : self.handleButtonp("minus"))
 		self.button["minus"].released.connect(lambda : self.handleButtonr("minus"))
-		self.gridLayout.addWidget(self.button["minus"], 4, 3)
+		self.gridLayout.addWidget(self.button["minus"], 5, 3)
 
-
-		self.camview = QLabel()
-		self.gridLayout.addWidget(self.camview, btnline, 1)
 		btnline += 1
+		fl = QLabel("Feed")
+		self.gridLayout.addWidget(fl, btnline, 0)
+
+		self.feedslider = QSlider(Qt.Horizontal)
+		self.feedslider.setMinimum(0)
+		self.feedslider.setMaximum(600)
+		self.feedslider.setValue(self.jograte)
+		self.feedslider.setTickPosition(QSlider.TicksBelow)
+		self.feedslider.setTickInterval(10)
+		self.gridLayout.addWidget(self.feedslider, btnline, 1,1,2)
+		self.feedslider.valueChanged.connect(self.feedchange)
+
+		self.feedview = QLabel("20")
+		self.gridLayout.addWidget(self.feedview, btnline, 3)
+
+
+	def feedchange(self):
+		self.jograte = self.feedslider.value()
+		self.feedview.setText(str(self.jograte))
 
 	def handleButtonp(self,b):
 		self.pressed = b
+		if b in ["up","upright","upleft"]:
+			jograte = self.jograte
+		elif b in ["down", "downright", "downleft"]:
+			jograte = -self.jograte
+		if b in ["up","down","upright","downright","upleft","downleft"]:
+			self.cnccb.send_command("JOG", {"axis":"Y", "rate":jograte})
+
+		if b in ["left","upleft","downleft"]:
+			jograte = self.jograte
+		elif b in ["right", "upright", "downright"]:
+			jograte = -self.jograte
+		if b in ["left","right","upright","downright","upleft","downleft"]:
+			self.cnccb.send_command("JOG", {"axis":"X", "rate":jograte})
+
+		if b in ["plus","minus"]:
+			self.cnccb.send_command("JOG", {"axis":"Z", "rate":jograte})
 
 	def handleButtonr(self,b):
 		self.pressed = None
+		if b in ["up","upright","upleft"]:
+			jograte = self.jograte
+		elif b in ["down", "downright", "downleft"]:
+			jograte = -self.jograte
+		if b in ["up","down","upright","downright","upleft","downleft"]:
+			self.cnccb.send_command("JOGSTOP", {"axis":"Y", "rate":jograte})
+
+		if b in ["left","upleft","downleft"]:
+			jograte = self.jograte
+		elif b in ["right", "upright", "downright"]:
+			jograte = -self.jograte
+			
+		if b in ["left","right","upright","downright","upleft","downleft"]:
+			self.cnccb.send_command("JOGSTOP", {"axis":"X", "rate":jograte})
+			
+		if b in ["plus","minus"]:
+			self.cnccb.send_command("JOGSTOP", {"axis":"Z", "rate":jograte})
 	
 
 if __name__ == "__main__":

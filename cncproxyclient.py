@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 #import linuxcnc
 import socket
 import struct
@@ -28,23 +29,24 @@ class linuxCNCBridge():
 			print("RECV: %s" % r2)
 		return r2
 
-	def send_command(self, cmd):
+	def send_command(self, cmd,args = {}):
 		if DEBUG:
 			print("SEND: %s" % cmd)
-		c = json.dumps({"cmd":cmd})
+		cmdict ={"cmd":cmd}
+		cmdict.update(args)
+		c = json.dumps(cmdict)
 		self.s.send(struct.pack(">L", len(c)) + bytes(c,'utf-8'))
 		return self.get_response()
 	
 
 
-cb = linuxCNCBridge(TCP_IP,TCP_PORT);
+if __name__ == "__main__":
+	cb = linuxCNCBridge(TCP_IP,TCP_PORT);
 
-
-cb.send_command("hello world")
-time.sleep(.1)
-cb.send_command("hello world")
-time.sleep(.1)
-cb.send_command("hello world")
-time.sleep(.1)
+	
+	cb.send_command("hello world")
+	cb.send_command("GETPOS")
+	cb.send_command("HOMEMILL")
+	cb.send_command("GETPOS")
 
 

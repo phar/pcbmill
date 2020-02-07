@@ -34,7 +34,12 @@ class BoardView(QDialog,QObject):
 		self.dynamic_canvas = FigureCanvas(Figure(figsize=(5, 3)))
 		self.plotWidgetax = self.dynamic_canvas.figure.subplots()
 		self.gridLayout.addWidget(self.dynamic_canvas, 0, 0,btnline,1)
+		cid = self.dynamic_canvas.mpl_connect('button_press_event', self.boardclick)
 		self.temp()
+		
+	def boardclick(self, event):
+		if  event.dblclick and event.button == 1:
+			print("dblckicked board",event.xdata, event.ydata)
 
 	def temp(self):
 		x = np.linspace(-1,1,100)

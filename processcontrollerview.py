@@ -16,15 +16,19 @@ class ProcessController(QObject):
 	next_process = pyqtSignal(int)
 	begin_process = pyqtSignal()
 	end_process = pyqtSignal()
+	settings_update =  pyqtSignal(dict)
 #	new_process_file = pyqtSignal(GcodeFile)
 	new_cam_files = pyqtSignal(GcodeFile)
 
-	def __init__(self):
+	def __init__(self,parent, cnccb):
 		QObject.__init__(self)
+		self.cnccb = cnccb
+		self.parent = parent
+		self.millsettings = {}
 		self.settingsdict ={}
 		self.variables = {}
 		self.projectdir = "/tmp"
-		self.millsettingsfile = "mill_settings.json"
+#		self.millsettingsfile = "mill_settings.json"
 		self.scriptdir = "flatcam_scripts"
 		self.cncscriptdir = "cnc_scripts"
 		self.toolsettingsdir = "processes"
@@ -33,11 +37,15 @@ class ProcessController(QObject):
 		self.projectfiles = {}
 		self.completed_steps = []
 		
-		self.loadMillSettings()
+#		self.loadMillSettings()
+		self.next_process.connect(self.parent.updateprocess)
+		self.parent.millsettings_update.connect(self.millsettings_update)
+
+
 		self.process = [
 #			("Process Gerber Files", lambda x: self.dummy(x)),
 
-			("Init Mill",self.mill_init,[]),
+			("Init Mill",lambda: self.cnccb.send_command("HOMEMILL"),[]),
 			("Set PCB Origin",lambda: self.runlinuxcncjob("set_pcb_origin.txt"),[]),
 			("Process Drills", lambda: self.runCAM2("drills"),[]),
 			
@@ -71,8 +79,8 @@ class ProcessController(QObject):
 			("tool change complete",lambda x: self.dummy(x),[])
 			]
 		
-		
-		
+	def millsettings_update(self, settings):
+		self.millsettings = settings
 		
 	def patchTemplateFileToFile(self,patchdict, template,dst=None):
 		if dst == None:
@@ -214,10 +222,10 @@ class ProcessController(QObject):
 		self.settingsdict = {**self.settingsdict, **json.load(f)}
 		self.makeVarDict()
 
-	def loadMillSettings(self):
-		f = open(self.millsettingsfile,"rb")
-		self.settingsdict = json.load(f)
-		self.makeVarDict()
+#	def loadMillSettings(self):
+#		f = open(self.millsettingsfile,"rb")
+#		self.settingsdict = json.load(f)
+#		self.makeVarDict()
 
 	def makeVarDict(self):
 		self.variables = {}
@@ -230,26 +238,54 @@ class ProcessController(QObject):
 
 		for n,v in self.settingsdict.items():
 			self.variables[n] = v
+		
+		self.settings_update.emit(self.variables)
 
 
 class ProcessControllerView(QDialog,QObject):
 	controller = pyqtSignal(list)
-	def __init__(self,parent = None):
+	millsettings_update = pyqtSignal(dict)
+	
+	def __init__(self,parent,cnccb):
 		QDialog.__init__(self)
-		self.pc = ProcessController()
+		self.parent = parent
+		self.pc = ProcessController(self, cnccb)
+		self.pc.new_cam_files.connect(self.newcam)
 		self.gridLayout = QGridLayout(self)
-		self.setWindowTitle("Proocess Conroller")
+		self.setWindowTitle("Process Conroller")
 		self.setLayout(self.gridLayout)
 		self.feedrate = 100
 		self.makeWindow()
-		self.pc.next_process.connect(self.updateprocess)
-		
+		self.parent.millsettings_update.connect(self.millsettings_update.emit)
+		self.parent.updateproject.connect(self.pc.updateproject)
+		self.parent.updateproject.connect(self.updateproject)
+
+	def newcam(self,gcodeobj):
+		self.cadfile.setText(gcodeobj.filename)
+	
 	def updateprocess(self, index):
 		self.proocessstep.setCurrentIndex(index)
+		
+
+	def updateproject(self,prjectuple):
+		self.projectpath.setText(prjectuple[0])
 
 	def makeWindow(self):
 		self.button = {}
 		btnline =0
+		
+		label = QLabel("Project Path:")
+		self.projectpath = QLabel("<none>")
+		self.gridLayout.addWidget(label, btnline, 0)
+		self.gridLayout.addWidget(self.projectpath, btnline, 1,1,2)
+		btnline+=1
+
+		label = QLabel("Cad File:")
+		self.cadfile = QLabel("<none>")
+		self.gridLayout.addWidget(label, btnline, 0)
+		self.gridLayout.addWidget(self.cadfile, btnline, 1)
+		btnline+=1
+
 
 		self.button["home"] = QPushButton('Home', self)
 #		self.button["home"].setIcon(QIcon('images/right.png'))

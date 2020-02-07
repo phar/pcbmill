@@ -6,12 +6,14 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QSize ,QTimer
 from PyQt5.QtGui import *
 from PyQt5.QtCore import pyqtSignal,pyqtSlot, QObject
-
+from shapely.geometry import mapping, shape, Point
 
 class CameraView(QDialog,QObject):
+	frame_click = pyqtSignal(Point)
 	frame = pyqtSignal(QImage)
 	def __init__(self,parent = None):
 		QDialog.__init__(self)
+		self.parent = parent
 		self.setWindowTitle("Camera View")
 		self.gridLayout = QGridLayout(self)
 		self.setLayout(self.gridLayout)  
@@ -22,13 +24,20 @@ class CameraView(QDialog,QObject):
 		self.timer = QTimer()
 		self.timer.timeout.connect(self.tick)
 		self.timer.start(100)
-
+		self.settings = {}
+		self.parent.millsettings_update.connect(self.settings_update)
+		
+	def settings_update(self,settings):
+		self.settings = settings
+		print(self.settings)
 
 	def tick(self):
 		ret, frame = self.cap.read()
 
 		height, width, channel = frame.shape
 		bytesPerLine = 3 * width
+		self.frame_center =  Point(frame.shape[1]/2.0,frame.shape[0]/2.0)
+		
 		self.lastframe = QImage(frame.data, width, height, bytesPerLine, QImage.Format_RGB888)
 
 		cv2.line(frame,(int(width/2),0),(int(width/2),height),(0,255,255),1)
@@ -71,7 +80,13 @@ class CameraView(QDialog,QObject):
 		self.camview = QLabel()
 		self.tick()
 		self.gridLayout.addWidget(self.camview, btnline, 1)
+		self.camview.mouseReleaseEvent = self.clickview
 		btnline += 1
+
+	def clickview(self, event):
+		(x,y) = (event.x(), event.y())
+		(xd,yd) = ((self.frame_center.x - x) * self.settings['camera_mm_per_pixel']), ((self.frame_center.y - y) * self.settings['camera_mm_per_pixel'])
+		self.frame_click.emit(Point((xd,yd)))
 
 	def cancel(self):
 		self.doneit.emit({})
